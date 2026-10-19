@@ -237,12 +237,15 @@ class ToolCallingAgent:
         return self.messages
 
     def _load_memory(self) -> str:
-        """Read durable facts saved about the user in earlier sessions."""
-        # TODO 2 (agent side): return the text of MEMORY_FILE if it exists,
-        # otherwise return "(no saved notes yet)". This string is dropped into
-        # the system prompt, so whatever is in the file becomes instructions
-        # the model sees every session.
-        raise NotImplementedError("Lab 7 TODO 2 (agent side): implement _load_memory")
+        """Read durable facts saved about the user in earlier sessions.
+
+        PROVIDED. Note what this does: the file's text is dropped straight into
+        the system prompt every session, so anything written to memory becomes
+        instructions the model sees from then on.
+        """
+        if MEMORY_FILE.exists():
+            return MEMORY_FILE.read_text(encoding="utf-8").strip() or "(no saved notes yet)"
+        return "(no saved notes yet)"
 
     def _create_system_prompt(self) -> str:
         """

@@ -1,8 +1,8 @@
-# Lab 7: Agents, MCP, and memory
+# Lab 7: A tool description is prompt text
 
-**Start with [LAB7.md](LAB7.md).** You will add two MCP tools and a memory to the
-airline agent below, then see an indirect prompt injection persist through that memory.
-The Python track (`python/`) is the one the lab targets.
+**Start with [LAB7.md](LAB7.md).** You add one MCP tool to the airline agent below, then
+see an attack hidden in a tool's *description* write a false fact into the agent's memory
+and persist it into a later, clean session. The Python track (`python/`) is the lab.
 
 ---
 

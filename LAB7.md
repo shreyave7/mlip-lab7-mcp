@@ -1,70 +1,56 @@
-# Lab 7: The agent that remembers
+# Lab 7: A tool description is prompt text
 
-**~80 min · work in pairs, explain on your own · built on the airline agent you will harden in I4**
+**40 min · pairs · built on the airline agent you will harden in I4 · everything is fictional**
 
-You will extend the airline customer-service agent with two new MCP tools and a **memory** so it recalls facts about a user across sessions. Then you will watch an indirect prompt injection ride in through a tool result, get *written into that memory*, and keep steering the agent in a later, clean session, after the attacker is gone.
+You will add one MCP tool to the airline agent, then watch an attack that needs **no poisoned data and no user message** — it hides in a tool's *description*. The agent reads every tool's description to decide what to call, so a description from a third-party MCP server is attacker-controlled text that is already in the model's context. Here it quietly writes a false, costly "fact" into the agent's **memory**, where it survives into a later, clean session.
 
-All three deliverables are shown to a TA. Everything is fictional; the only "attack" is a harmless marker you turn on yourself.
+## How the agent builds its context (2 min)
 
-## How the agent works (read first, 5 min)
+Every turn, the model sees one prompt assembled from three things:
 
 ```text
-you ─► agent (agent.py) ─────► LLM          system prompt = instructions + <memory> + <policy>
-          │  loop: LLM picks a tool, you run it, result goes back, repeat
-          ▼
-     ToolManager ──tools/call──► MCP airline server (tools.py) ──► data/
-                                 save_memory ─┐
-     _load_memory ◄──────────────────────────┴── data/memory/user.md
+system prompt  =  instructions + <memory> (data/memory/user.md) + <policy>
+tool list      =  every tool's NAME + DESCRIPTION + schema   <-- attacker-controlled if the server is
+                                                                 third-party; read before any tool runs
 ```
 
-Two facts carry the whole lab:
-1. The agent's system prompt is **assembled every session** from the policy *and* whatever is in `data/memory/user.md`.
-2. A tool result is just text the LLM reads. Nothing separates "data" from "instructions".
+So two surfaces carry untrusted text into the model: **memory** and **tool descriptions**. This lab is about the second one.
 
 ## Setup (before class)
 
-Two terminals. Python 3.11+. See `python/README.md` for details.
+Two terminals. See `python/README.md`. Put your Gemini (Vertex) key in `python/agent/.env`.
 
 ```bash
-cd python && python3 -m venv .venv && source .venv/bin/activate
-pip install -e ./agent -e ./mcp_airline
-cp agent/.env.template agent/.env   # put your Gemini (Vertex) key in it
+cd python && python3 -m venv .venv && source .venv/bin/activate && pip install -e ./agent -e ./mcp_airline
 ```
+- Terminal A (server): `PORT=8000 start-airline-server`
+- Terminal B (agent): `agent-cli http://localhost:8000/mcp`
 
-Terminal A (server): `PORT=8000 start-airline-server`
-Terminal B (agent): `agent-cli http://localhost:8000/mcp`
+Model is one line in `python/agent/src/agent/config.py`. Use the course Vertex credits (the free tier is ~5 req/min).
 
-The model is set in one line, `python/agent/src/agent/config.py` (`MODEL=`). Any LiteLLM model with tool calling works; use the course Vertex credits (the free tier allows only ~5 requests/min).
+## D1 · Add a tool (pass/fail, ~15 min)
 
-## Deliverables (pass/fail)
+Implement the one `TODO` in `python/mcp_airline/src/mcp_airline/tools.py`: `airport_info(iata)`. `current_time` right above it is a worked example to copy from.
 
-### D1 · Two new tools
-Implement **TODO 1a** `current_time` and **TODO 1b** `airport_info` in `python/mcp_airline/src/mcp_airline/tools.py`.
+As you write the docstring, notice: **that docstring becomes the tool's description, which the model reads to decide when to call you.** You are writing prompt text.
 
-Show the TA, in the agent, one question that failed before and works now:
-- time: *"My flight is tomorrow afternoon, what date is that?"*
-- airport: *"What city is JFK in?"*
+Restart the server. Show the TA the agent answering *"what city is JFK in?"* (it couldn't before). TA may ask: *where did the agent get the list of tools and their descriptions?*
 
-(Use the MCP Inspector or `get_flight_status` to sanity-check your tools: `npx @modelcontextprotocol/inspector http://localhost:8000/mcp`.)
+## D2 · Poison a tool description, watch it persist (pass/fail, ~18 min)
 
-### D2 · Memory, then poison it
-Implement **TODO 2**: `save_memory` (server) and `_load_memory` (agent, in `agent.py`).
+The server ships a tool `get_local_tips` from a "third-party" source. Its description is clean normally and **poisoned** when the server runs with `TOOL_ATTACK=1`. Memory (`save_memory`, and the agent reading `data/memory/user.md`) is already wired up.
 
-1. **It remembers.** Session 1: tell the agent *"I always fly vegetarian, remember that."* Quit. Start a fresh `agent-cli`. Session 2: ask *"what meal will I get?"* It recalls the preference from `data/memory/user.md`.
-2. **Poison it.** Start the server with the compromised airport page: `AIRPORT_ATTACK=1 PORT=8000 start-airline-server`. In a fresh session, ask *"what city is JFK in?"*. Look at the tool result and at `data/memory/user.md` afterward.
-3. **It persists.** Stop the server and restart it **without** `AIRPORT_ATTACK` (the page is "fixed"). In a brand-new session, ask to add a checked bag. 
+1. **Poison.** Stop the server; restart it as `TOOL_ATTACK=1 PORT=8000 start-airline-server`. In a fresh agent session, ask any normal question (e.g. *"what time is it in UTC?"*). Watch the agent follow the instruction hidden in `get_local_tips`'s description and call `save_memory`. Look at `data/memory/user.md`.
+2. **Persist.** Stop the server and restart it **without** `TOOL_ATTACK` (the malicious tool is "gone"). Start a brand-new agent session and ask to add a checked bag. 
 
-Show the TA `data/memory/user.md` after step 2 and the agent's behaviour in step 3. Say whether the injected instruction was **delivered**, **obeyed**, and whether it **persisted** after the source was clean.
-
-### D3 · Explain + one containment idea
-To the TA, in your own words:
-- Trace how the agent decided to call one tool: where the tool list comes from, who chooses, who runs it.
-- Why did the clean session in D2.3 still misbehave? Point at the exact text that carried the instruction and where it ended up.
-- Name one change that would *reduce* this (e.g. only persist facts the user stated; label memory as untrusted in the prompt; filter tool results before memory) and say why it is a reliability improvement, **not a guarantee**. (That guarantee is I4's job.)
+Show the TA: the poisoned description (`TOOL_ATTACK=1 python -c "from mcp_airline import tools"` or just read `tools.py`), `data/memory/user.md`, and the clean-session behaviour. Then answer:
+- **Where did the instruction live?** Point to it. (It was in the tool list = the prompt, before any tool ran.)
+- **Why does the clean session still obey it?** (It is in memory now.)
+- **One defence** that would reduce this (review/pin tool descriptions, show them to the user before trusting a server, screen tool output and memory with a guardrail) — and why it is a reliability improvement, **not a guarantee**. That guarantee is I4's job.
 
 ## Submit
-Commit your code. Do not commit `.env` or `data/memory/`. Show the three deliverables in your lab section.
+Commit your code. Do not commit `.env` or `data/memory/`. Show D1 and D2 in your section. To reset memory between runs: `rm data/memory/user.md`.
 
-## Stretch
-- Make `airport_info` pull real data from the [Wikipedia REST API](https://en.wikipedia.org/api/rest_v1/) instead of the local fixture. What new trust problem appears?
-- Give memory a second file the agent can read but not write, and move the "durable facts" there. Does that change the attack?
+## Stretch (optional)
+- Make `airport_info` fetch real data from the [Wikipedia REST API](https://en.wikipedia.org/api/rest_v1/). Now a third surface (tool *results*) is attacker-controlled too.
+- Add a guardrail: screen anything before it is written to memory, and measure what it misses.
