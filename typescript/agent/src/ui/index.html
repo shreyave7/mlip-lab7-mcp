@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Agent Chat</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        #chat {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            height: 500px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .user {
+            background: #e3f2fd;
+            margin-left: 20%;
+        }
+        .assistant {
+            background: #f5f5f5;
+            margin-right: 20%;
+        }
+        .system {
+            background: #fff3cd;
+            font-style: italic;
+            text-align: center;
+        }
+        #input-area {
+            display: flex;
+            gap: 10px;
+        }
+        #message-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">Simple Agent Chat</h1>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <small id="rate-limit-status" style="color: #666;"></small>
+            <button id="reset-btn" style="background: #f44336;">Reset</button>
+        </div>
+    </div>
+
+    <div id="mcp-servers" style="background: white; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+    <div id="chat"></div>
+    <div id="input-area">
+        <input type="text" id="message-input" placeholder="Type your message..." />
+        <button id="send-btn">Send</button>
+    </div>
+
+    <script>
+        const chat = document.getElementById('chat');
+        const input = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        let rateLimitConfig = { maxRequestsPerMinute: 15, maxRequestsPerDay: 1500 }; // defaults
+
+        function addMessage(role, content) {
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+            msg.textContent = content;
+            chat.appendChild(msg);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage('user', message);
+            input.value = '';
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Thinking...';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                // Handle Server-Sent Events
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop() || ''; // Keep incomplete message in buffer
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+
+                        const eventMatch = line.match(/^event: (\w+)\ndata: (.+)$/s);
+                        if (!eventMatch) continue;
+
+                        const [, eventType, dataStr] = eventMatch;
+                        const data = JSON.parse(dataStr);
+
+                        if (eventType === 'waiting') {
+                            addMessage('system', data.message);
+                        } else if (eventType === 'response') {
+                            addMessage('assistant', data.message);
+                        } else if (eventType === 'error') {
+                            addMessage('system', 'Error: ' + data.message);
+                        }
+                    }
+                }
+            } catch (error) {
+                addMessage('system', 'Error: ' + error.message);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send';
+                input.focus();
+            }
+        }
+
+        async function resetAgent() {
+            if (!confirm('Reset the conversation? This will clear all history.')) return;
+
+            try {
+                await fetch('/api/reset', { method: 'POST' });
+                chat.innerHTML = '';
+                addMessage('system', 'Conversation reset');
+            } catch (error) {
+                addMessage('system', 'Error resetting: ' + error.message);
+            }
+        }
+
+        async function loadMCPServers() {
+            try {
+                const response = await fetch('/api/mcp-servers');
+                const servers = await response.json();
+                const container = document.getElementById('mcp-servers');
+
+                if (servers.length === 0) {
+                    container.innerHTML = '<small style="color: #666;">No MCP servers configured</small>';
+                    return;
+                }
+
+                container.innerHTML = '<strong style="font-size: 14px;">MCP Servers:</strong>';
+                const list = document.createElement('div');
+                list.style.marginTop = '8px';
+
+                for (const server of servers) {
+                    const item = document.createElement('div');
+                    item.style.display = 'flex';
+                    item.style.alignItems = 'center';
+                    item.style.gap = '8px';
+                    item.style.marginBottom = '4px';
+                    item.style.fontSize = '13px';
+
+                    const dot = document.createElement('span');
+                    dot.textContent = '●';
+                    dot.style.fontSize = '12px';
+                    dot.style.color = server.status === 'connected' ? '#4caf50' : '#f44336';
+
+                    const text = document.createElement('span');
+                    const displayText = server.config.length > 50
+                        ? server.config.substring(0, 47) + '...'
+                        : server.config;
+                    text.textContent = `${displayText} (${server.transport})`;
+                    text.style.color = '#333';
+
+                    if (server.error) {
+                        text.title = `Error: ${server.error}`;
+                        text.style.cursor = 'help';
+                    }
+
+                    item.appendChild(dot);
+                    item.appendChild(text);
+                    list.appendChild(item);
+                }
+
+                container.appendChild(list);
+            } catch (error) {
+                console.error('Failed to fetch MCP servers:', error);
+            }
+        }
+
+        async function loadRateLimitConfig() {
+            try {
+                const response = await fetch('/api/rate-limit-config');
+                rateLimitConfig = await response.json();
+            } catch (error) {
+                console.error('Failed to fetch rate limit config:', error);
+            }
+        }
+
+        async function updateRateLimitStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                const statusEl = document.getElementById('rate-limit-status');
+                const rpm = rateLimitConfig.maxRequestsPerMinute;
+                const rpd = rateLimitConfig.maxRequestsPerDay;
+
+                statusEl.textContent = `${status.requestsLastMinute}/${rpm} RPM, ${status.requestsToday}/${rpd} RPD`;
+
+                // Visual warning when approaching limits (90% and 95% thresholds)
+                const rpmWarning = rpm * 0.9;
+                const rpmCritical = rpm * 0.95;
+                const rpdWarning = rpd * 0.9;
+                const rpdCritical = rpd * 0.95;
+
+                if (status.requestsLastMinute >= rpmCritical || status.requestsToday >= rpdCritical) {
+                    statusEl.style.color = '#f44336';
+                } else if (status.requestsLastMinute >= rpmWarning || status.requestsToday >= rpdWarning) {
+                    statusEl.style.color = '#ff9800';
+                } else {
+                    statusEl.style.color = '#666';
+                }
+            } catch (error) {
+                console.error('Failed to fetch rate limit status:', error);
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        resetBtn.addEventListener('click', resetAgent);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Initialize: load config and start status updates
+        (async () => {
+            await loadMCPServers();
+            await loadRateLimitConfig();
+            updateRateLimitStatus();
+            setInterval(updateRateLimitStatus, 5000);
+        })();
+
+        input.focus();
+    </script>
+</body>
+</html>

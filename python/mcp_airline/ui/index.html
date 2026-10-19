@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyWay Airlines - Customer Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="email"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="text"]:disabled {
+            background: #f5f5f5;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .secondary-btn {
+            background: #f5f5f5;
+            color: #333;
+            margin-top: 10px;
+        }
+
+        .secondary-btn:hover:not(:disabled) {
+            background: #e0e0e0;
+            box-shadow: none;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-left: 4px solid #c62828;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .membership-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .membership-gold {
+            background: #ffd700;
+            color: #8b6914;
+        }
+
+        .membership-silver {
+            background: #c0c0c0;
+            color: #4a4a4a;
+        }
+
+        .membership-regular {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .passenger-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .passenger-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .passenger-fields input {
+            font-size: 14px;
+        }
+
+        .remove-passenger {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            width: auto;
+        }
+
+        .remove-passenger:hover {
+            background: #d32f2f;
+            transform: none;
+        }
+
+        .add-passenger {
+            width: auto;
+            padding: 10px 20px;
+            background: #4caf50;
+            margin-bottom: 20px;
+        }
+
+        .add-passenger:hover {
+            background: #388e3c;
+        }
+
+        .payment-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .payment-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .payment-fields select,
+        .payment-fields input {
+            font-size: 14px;
+        }
+
+        .remove-payment {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            width: auto;
+        }
+
+        .remove-payment:hover {
+            background: #d32f2f;
+            transform: none;
+        }
+
+        .add-payment {
+            width: auto;
+            padding: 10px 20px;
+            background: #4caf50;
+            margin-bottom: 20px;
+        }
+
+        .add-payment:hover {
+            background: #388e3c;
+        }
+
+        @media (max-width: 600px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+
+            .passenger-fields {
+                grid-template-columns: 1fr;
+            }
+
+            .payment-fields {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                margin: 20px auto;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>✈️ SkyWay Airlines</h1>
+                <p>Customer Portal</p>
+            </div>
+
+            <!-- Login View -->
+            <div id="login-view" class="content">
+                <div class="section-title">Sign In</div>
+                <div id="login-error" class="error hidden"></div>
+
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="user-id">Customer ID</label>
+                        <input
+                            type="text"
+                            id="user-id"
+                            placeholder="e.g., sara_doe_496"
+                            required
+                        />
+                    </div>
+                    <button type="submit" id="login-btn">Sign In</button>
+                </form>
+            </div>
+
+            <!-- Profile View -->
+            <div id="profile-view" class="content hidden">
+                <div id="profile-error" class="error hidden"></div>
+                <div id="profile-success" class="success hidden"></div>
+
+                <!-- Read-only Info Section -->
+                <div class="section-title">Account Information</div>
+                <div style="margin-bottom: 30px;">
+                    <div class="info-row">
+                        <span class="info-label">Customer ID</span>
+                        <span class="info-value" id="display-user-id"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Date of Birth</span>
+                        <span class="info-value" id="display-dob"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Membership</span>
+                        <span class="info-value" id="display-membership"></span>
+                    </div>
+                </div>
+
+                <!-- Editable Profile Form -->
+                <form id="profile-form">
+                    <div class="section-title">Personal Information</div>
+
+                    <div class="row">
+                        <div class="form-group">
+                            <label for="first-name">First Name</label>
+                            <input type="text" id="first-name" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="last-name">Last Name</label>
+                            <input type="text" id="last-name" required />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" required />
+                    </div>
+
+                    <div class="section-title" style="margin-top: 30px;">Mailing Address</div>
+
+                    <div class="form-group">
+                        <label for="address1">Address Line 1</label>
+                        <input type="text" id="address1" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address2">Address Line 2 (Optional)</label>
+                        <input type="text" id="address2" />
+                    </div>
+
+                    <div class="row">
+                        <div class="form-group">
+                            <label for="city">City</label>
+                            <input type="text" id="city" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="state">State</label>
+                            <input type="text" id="state" required />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="form-group">
+                            <label for="zip">ZIP Code</label>
+                            <input type="text" id="zip" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="country">Country</label>
+                            <input type="text" id="country" required />
+                        </div>
+                    </div>
+
+                    <div class="section-title" style="margin-top: 30px;">Saved Passengers</div>
+                    <div id="passengers-container"></div>
+                    <button type="button" class="add-passenger" id="add-passenger-btn">+ Add Passenger</button>
+
+                    <div class="section-title" style="margin-top: 30px;">Payment Methods</div>
+                    <div id="payments-container"></div>
+                    <button type="button" class="add-payment" id="add-payment-btn">+ Add Credit Card</button>
+
+                    <button type="submit" id="save-btn">Save Changes</button>
+                    <button type="button" class="secondary-btn" id="logout-btn">Sign Out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentUserId = null;
+        let originalPaymentMethods = {};
+
+        // Elements
+        const loginView = document.getElementById('login-view');
+        const profileView = document.getElementById('profile-view');
+        const loginForm = document.getElementById('login-form');
+        const profileForm = document.getElementById('profile-form');
+        const loginError = document.getElementById('login-error');
+        const profileError = document.getElementById('profile-error');
+        const profileSuccess = document.getElementById('profile-success');
+
+        // Show/hide error/success messages
+        function showError(element, message) {
+            element.textContent = message;
+            element.classList.remove('hidden');
+        }
+
+        function hideError(element) {
+            element.classList.add('hidden');
+        }
+
+        function showSuccess(message) {
+            profileSuccess.textContent = message;
+            profileSuccess.classList.remove('hidden');
+            setTimeout(() => hideError(profileSuccess), 3000);
+        }
+
+        // Passenger management
+        function renderPassengers(passengers) {
+            const container = document.getElementById('passengers-container');
+            container.innerHTML = '';
+
+            passengers.forEach((passenger, index) => {
+                const item = document.createElement('div');
+                item.className = 'passenger-item';
+                item.innerHTML = `
+                    <button type="button" class="remove-passenger" data-index="${index}">Remove</button>
+                    <div class="passenger-fields">
+                        <input type="text" placeholder="First Name" value="${passenger.first_name}" data-index="${index}" data-field="first_name" required>
+                        <input type="text" placeholder="Last Name" value="${passenger.last_name}" data-index="${index}" data-field="last_name" required>
+                        <input type="text" placeholder="DOB (YYYY-MM-DD)" value="${passenger.dob}" data-index="${index}" data-field="dob" required>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            // Add event listeners for remove buttons
+            container.querySelectorAll('.remove-passenger').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.getAttribute('data-index'));
+                    passengers.splice(index, 1);
+                    renderPassengers(passengers);
+                });
+            });
+        }
+
+        function getPassengers() {
+            const passengers = [];
+            const items = document.querySelectorAll('.passenger-item');
+
+            items.forEach(item => {
+                const fields = item.querySelectorAll('input');
+                passengers.push({
+                    first_name: fields[0].value.trim(),
+                    last_name: fields[1].value.trim(),
+                    dob: fields[2].value.trim()
+                });
+            });
+
+            return passengers;
+        }
+
+        document.getElementById('add-passenger-btn').addEventListener('click', () => {
+            const passengers = getPassengers();
+            passengers.push({ first_name: '', last_name: '', dob: '' });
+            renderPassengers(passengers);
+        });
+
+        // Payment methods management
+        function renderPaymentMethods(paymentMethods) {
+            const container = document.getElementById('payments-container');
+            container.innerHTML = '';
+
+            Object.entries(paymentMethods).forEach(([id, method]) => {
+                const item = document.createElement('div');
+                item.className = 'payment-item';
+
+                let fields = '';
+                if (method.source === 'credit_card') {
+                    fields = `
+                        <input type="text" value="Credit Card" disabled style="background: #f0f0f0;">
+                        <input type="text" placeholder="Brand (e.g., visa)" value="${method.brand || ''}" data-id="${id}" data-field="brand">
+                        <input type="text" placeholder="Last 4 digits" value="${method.last_four || ''}" data-id="${id}" data-field="last_four" maxlength="4">
+                    `;
+                } else if (method.source === 'gift_card') {
+                    fields = `
+                        <input type="text" value="Gift Card" disabled style="background: #f0f0f0;">
+                        <input type="text" value="$${method.amount || 0}" disabled style="background: #f0f0f0;">
+                        <input type="text" value="ID: ${id}" disabled style="background: #f0f0f0;">
+                    `;
+                } else if (method.source === 'certificate') {
+                    fields = `
+                        <input type="text" value="Certificate" disabled style="background: #f0f0f0;">
+                        <input type="text" value="$${method.amount || 0}" disabled style="background: #f0f0f0;">
+                        <input type="text" value="ID: ${id}" disabled style="background: #f0f0f0;">
+                    `;
+                }
+
+                item.innerHTML = `
+                    <button type="button" class="remove-payment" data-id="${id}">Remove</button>
+                    <div class="payment-fields">
+                        ${fields}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            // Add event listeners for remove buttons
+            container.querySelectorAll('.remove-payment').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    delete paymentMethods[id];
+                    renderPaymentMethods(paymentMethods);
+                });
+            });
+        }
+
+        function getPaymentMethods() {
+            // Start with all original payment methods (including non-editable ones)
+            const paymentMethods = JSON.parse(JSON.stringify(originalPaymentMethods));
+
+            // Get all displayed items
+            const items = document.querySelectorAll('.payment-item');
+            const displayedIds = new Set();
+
+            items.forEach(item => {
+                const editableFields = item.querySelectorAll('input:not([disabled])');
+
+                if (editableFields.length > 0) {
+                    // This is a credit card (editable)
+                    const id = editableFields[0].getAttribute('data-id');
+                    displayedIds.add(id);
+                    paymentMethods[id] = {
+                        id: id,
+                        source: 'credit_card',
+                        brand: editableFields[0].value.trim(),
+                        last_four: editableFields[1].value.trim()
+                    };
+                } else {
+                    // This is gift card or certificate (read-only), track that it's displayed
+                    const removeBtn = item.querySelector('.remove-payment');
+                    const id = removeBtn.getAttribute('data-id');
+                    displayedIds.add(id);
+                }
+            });
+
+            // Remove payment methods that were deleted (not in displayed set)
+            Object.keys(paymentMethods).forEach(id => {
+                if (!displayedIds.has(id)) {
+                    delete paymentMethods[id];
+                }
+            });
+
+            return paymentMethods;
+        }
+
+        document.getElementById('add-payment-btn').addEventListener('click', () => {
+            const paymentMethods = getPaymentMethods();
+            const newId = `credit_card_${Date.now()}`;
+            paymentMethods[newId] = {
+                id: newId,
+                source: 'credit_card',
+                brand: '',
+                last_four: ''
+            };
+            renderPaymentMethods(paymentMethods);
+        });
+
+        // Login handler
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError(loginError);
+
+            const userId = document.getElementById('user-id').value.trim();
+            const loginBtn = document.getElementById('login-btn');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Signing in...';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Login failed');
+                }
+
+                currentUserId = data.user_id;
+                await loadProfile(currentUserId);
+
+                loginView.classList.add('hidden');
+                profileView.classList.remove('hidden');
+            } catch (error) {
+                showError(loginError, error.message);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign In';
+            }
+        });
+
+        // Load profile data
+        async function loadProfile(userId) {
+            try {
+                const response = await fetch(`/api/profile/${userId}`);
+                const user = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(user.error || 'Failed to load profile');
+                }
+
+                // Display read-only info
+                document.getElementById('display-user-id').textContent = user.user_id;
+                document.getElementById('display-dob').textContent = user.dob;
+
+                const membershipEl = document.getElementById('display-membership');
+                membershipEl.innerHTML = `<span class="membership-badge membership-${user.membership}">${user.membership}</span>`;
+
+                // Fill editable fields
+                document.getElementById('first-name').value = user.name.first_name;
+                document.getElementById('last-name').value = user.name.last_name;
+                document.getElementById('email').value = user.email;
+                document.getElementById('address1').value = user.address.address1;
+                document.getElementById('address2').value = user.address.address2 || '';
+                document.getElementById('city').value = user.address.city;
+                document.getElementById('state').value = user.address.state;
+                document.getElementById('zip').value = user.address.zip;
+                document.getElementById('country').value = user.address.country;
+
+                // Load saved passengers
+                renderPassengers(user.saved_passengers || []);
+
+                // Load payment methods and store original
+                originalPaymentMethods = user.payment_methods || {};
+                renderPaymentMethods(originalPaymentMethods);
+            } catch (error) {
+                showError(profileError, error.message);
+            }
+        }
+
+        // Save profile changes
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError(profileError);
+            hideError(profileSuccess);
+
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const updates = {
+                    name: {
+                        first_name: document.getElementById('first-name').value.trim(),
+                        last_name: document.getElementById('last-name').value.trim()
+                    },
+                    email: document.getElementById('email').value.trim(),
+                    address: {
+                        address1: document.getElementById('address1').value.trim(),
+                        address2: document.getElementById('address2').value.trim(),
+                        city: document.getElementById('city').value.trim(),
+                        state: document.getElementById('state').value.trim(),
+                        zip: document.getElementById('zip').value.trim(),
+                        country: document.getElementById('country').value.trim()
+                    },
+                    saved_passengers: getPassengers(),
+                    payment_methods: getPaymentMethods()
+                };
+
+                const response = await fetch(`/api/profile/${currentUserId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to update profile');
+                }
+
+                showSuccess('Profile updated successfully!');
+            } catch (error) {
+                showError(profileError, error.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Changes';
+            }
+        });
+
+        // Logout handler
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            currentUserId = null;
+            loginForm.reset();
+            profileForm.reset();
+            hideError(loginError);
+            hideError(profileError);
+            hideError(profileSuccess);
+
+            profileView.classList.add('hidden');
+            loginView.classList.remove('hidden');
+        });
+
+        // Focus on user ID input on load
+        document.getElementById('user-id').focus();
+    </script>
+</body>
+</html>

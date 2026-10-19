@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Chat</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            margin: 0 0 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #mcp-servers {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 13px;
+        }
+        #chat {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            height: 500px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .user {
+            background: #e3f2fd;
+            margin-left: 20%;
+        }
+        .assistant {
+            background: #f5f5f5;
+            margin-right: 20%;
+        }
+        .system {
+            background: #fff3cd;
+            font-style: italic;
+            text-align: center;
+        }
+        #input-area {
+            display: flex;
+            gap: 10px;
+        }
+        #message-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #reset-btn {
+            background: #f44336;
+        }
+        #reset-btn:hover {
+            background: #d32f2f;
+        }
+        .server-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .status-dot {
+            font-size: 12px;
+        }
+        .status-connected {
+            color: #4caf50;
+        }
+        .status-failed {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>
+        <span>Agent Chat</span>
+        <button id="reset-btn">Reset</button>
+    </h1>
+
+    <div id="mcp-servers"></div>
+    <div id="chat"></div>
+    <div id="input-area">
+        <input type="text" id="message-input" placeholder="Type your message..." />
+        <button id="send-btn">Send</button>
+    </div>
+
+    <script>
+        const chat = document.getElementById('chat');
+        const input = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        function addMessage(role, content) {
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+            msg.textContent = content;
+            chat.appendChild(msg);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage('user', message);
+            input.value = '';
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Thinking...';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                // Handle Server-Sent Events
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+
+                        const eventMatch = line.match(/^event: (\w+)\ndata: (.+)$/s);
+                        if (!eventMatch) continue;
+
+                        const [, eventType, dataStr] = eventMatch;
+                        const data = JSON.parse(dataStr);
+
+                        if (eventType === 'waiting') {
+                            addMessage('system', data.message);
+                        } else if (eventType === 'response') {
+                            addMessage('assistant', data.message);
+                        } else if (eventType === 'error') {
+                            addMessage('system', 'Error: ' + data.message);
+                        }
+                    }
+                }
+            } catch (error) {
+                addMessage('system', 'Error: ' + error.message);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send';
+                input.focus();
+            }
+        }
+
+        async function resetAgent() {
+            if (!confirm('Reset the conversation? This will clear all history.')) return;
+
+            try {
+                await fetch('/api/reset', { method: 'POST' });
+                chat.innerHTML = '';
+                addMessage('system', 'Conversation reset');
+            } catch (error) {
+                addMessage('system', 'Error resetting: ' + error.message);
+            }
+        }
+
+        async function loadMCPServers() {
+            try {
+                const response = await fetch('/api/mcp-servers');
+                const servers = await response.json();
+                const container = document.getElementById('mcp-servers');
+
+                if (servers.length === 0) {
+                    container.innerHTML = '<small style="color: #666;">No MCP servers configured</small>';
+                    return;
+                }
+
+                container.innerHTML = '<strong>MCP Servers:</strong>';
+                const list = document.createElement('div');
+                list.style.marginTop = '8px';
+
+                for (const server of servers) {
+                    const item = document.createElement('div');
+                    item.className = 'server-item';
+
+                    const dot = document.createElement('span');
+                    dot.textContent = '●';
+                    dot.className = `status-dot status-${server.status}`;
+
+                    const text = document.createElement('span');
+                    const displayText = server.config.length > 60
+                        ? server.config.substring(0, 57) + '...'
+                        : server.config;
+                    text.textContent = `${displayText} (${server.transport})`;
+
+                    if (server.error) {
+                        text.title = `Error: ${server.error}`;
+                        text.style.cursor = 'help';
+                    }
+
+                    item.appendChild(dot);
+                    item.appendChild(text);
+                    list.appendChild(item);
+                }
+
+                container.appendChild(list);
+            } catch (error) {
+                console.error('Failed to fetch MCP servers:', error);
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        resetBtn.addEventListener('click', resetAgent);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // Initialize
+        loadMCPServers();
+        input.focus();
+    </script>
+</body>
+</html>

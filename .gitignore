@@ -1,11 +1,13 @@
+.vscode/
 .env
+node_modules
+assignment/agent/messages.log
+
+# Lab 7
+TA_GUIDE.md
+**/.env
+data/memory/
 .venv/
 __pycache__/
-*.py[cod]
 *.egg-info/
-build/
-dist/
-.DS_Store
-
-# TA-only answer key: keep it out of the public repo.
-TA.md
+messages.log
