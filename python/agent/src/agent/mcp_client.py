@@ -129,7 +129,7 @@ class MCPServerConnection:
                         MCPTool(
                             name=tool.name,
                             description=tool.description,
-                            inputSchema=tool.inputSchema
+                            inputSchema=getattr(tool, "input_schema", None) or getattr(tool, "inputSchema", {})
                         )
                         for tool in response.tools
                     ]
@@ -142,7 +142,7 @@ class MCPServerConnection:
                         MCPTool(
                             name=tool.name,
                             description=tool.description,
-                            inputSchema=tool.inputSchema
+                            inputSchema=getattr(tool, "input_schema", None) or getattr(tool, "inputSchema", {})
                         )
                         for tool in response.tools
                     ]
