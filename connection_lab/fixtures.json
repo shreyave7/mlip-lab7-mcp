@@ -1,0 +1,27 @@
+{
+  "flights": {
+    "NL204": {
+      "synthetic": true,
+      "flight_number": "NL204",
+      "airline": "Northlight Air (fictional)",
+      "airport": "ORD",
+      "gate": "C18",
+      "status": "boarding",
+      "boarding_closes_utc": "2026-10-18T21:25:00+00:00",
+      "departure_utc": "2026-10-18T21:40:00+00:00"
+    }
+  },
+  "airports": {
+    "ORD": {
+      "synthetic": true,
+      "code": "ORD",
+      "name": "Chicago O'Hare International Airport",
+      "city": "Chicago",
+      "time_zone": "America/Chicago",
+      "gate_from": "B6",
+      "gate_to": "C18",
+      "walk_minutes": 18,
+      "notice": "Synthetic class notice: a help desk is near gate B6. Ask staff about connection options."
+    }
+  }
+}
