@@ -1,66 +1,53 @@
 # Lab 7: A tool description is prompt text
 
-You will add one MCP tool to the airline agent, then study an attack that needs **no poisoned data and no user message**. It hides in a tool's *description*. The agent reads every tool's description to decide what to call, so a description from a third-party MCP server is attacker-controlled text that is already in the model's context. Here it quietly writes a false, costly "fact" into the agent's **memory**, where it survives into a later, clean session. All data is fictional.
+You make four small changes to an airline support agent, then watch an attack that hides in a tool's *description* rather than in data or a user message. The agent reads every tool's description to decide what to call, so a description from a third-party server is attacker-controlled text already in the model's context. It writes a false fact into the agent's memory, which survives into a later, clean session. All data is fictional.
 
-## What you edit
+## What you implement
 
-You change **one file**: `python/mcp_airline/src/mcp_airline/tools.py` (a single `TODO`, the `airport_info` tool). Everything else is provided. Ignore the rest of the repository, including the entire `typescript/` folder.
+Four tasks, each in one file, each a different idea. Everything else is provided; ignore the rest of the repository, including `typescript/`. Every task is marked with a `TASK` comment giving exact instructions, and `current_time` in `tools.py` is a worked example.
 
-Three files are worth reading:
+| Task | File | Concept |
+| --- | --- | --- |
+| T1 `airport_info` | `python/mcp_airline/src/mcp_airline/tools.py` | Define a read-only MCP tool and validate its input. |
+| T2 `save_memory` | same file | A tool that changes state (writes to disk), not just one that reads. |
+| T3 `_load_memory` | `python/agent/src/agent/agent.py` | How the agent builds its prompt: saved state re-enters every session. |
+| T4 `is_suspicious` | `python/agent/src/agent/tool_manager.py` | A host-side guardrail on tool descriptions, and why a filter is not a guarantee. |
 
-| File | What it is |
-| --- | --- |
-| `python/mcp_airline/src/mcp_airline/tools.py` | The MCP server's tools. Your `TODO` is here. |
-| `python/agent/src/agent/agent.py` | The agent loop, and how the system prompt and memory are assembled. |
-| `data/memory/user.md` | The agent's memory file, created at runtime. |
+## Setup
 
-## How the agent builds its context
-
-Every turn, the model sees one prompt assembled from three things:
-
-```text
-system prompt  =  instructions + <memory> (data/memory/user.md) + <policy>
-tool list      =  every tool's NAME + DESCRIPTION + schema   <-- attacker-controlled if the server is
-                                                                 third-party; read before any tool runs
-```
-
-So two surfaces carry untrusted text into the model: **memory** and **tool descriptions**. This lab is about the second one.
-
-## Setup (before class)
-
-Two terminals. See `python/README.md`.
+Two terminals.
 
 ```bash
 cd python && python3 -m venv .venv && source .venv/bin/activate && pip install -e ./agent -e ./mcp_airline
 ```
-- Terminal A (server): `PORT=8000 start-airline-server`
-- Terminal B (agent): `agent-cli http://localhost:8000/mcp`
 
-**Any LLM works.** The agent uses LiteLLM, so pick whatever you have: OpenAI, Anthropic, a local model, etc. Change the one `MODEL` line in `python/agent/src/agent/config.py` and set the matching API key in `python/agent/.env`. The default is a free Google AI Studio Gemini model, chosen only because it needs no payment (its free tier is about 5 requests per minute); it carries no other significance.
+- Server: `PORT=8000 start-airline-server`
+- Agent: `agent-cli http://localhost:8000/mcp`
 
-## D1 · Add a tool
+Any LLM works through LiteLLM. Set `MODEL` in `python/agent/src/agent/config.py` and the matching key in `python/agent/.env`. The default is a free Google AI Studio Gemini model, chosen only because it needs no payment (its free tier allows about 5 requests per minute).
 
-Implement the one `TODO` in `python/mcp_airline/src/mcp_airline/tools.py`: `airport_info(iata)`. `current_time` right above it is a worked example to copy from.
+## D1 · Build the agent (T1, T2, T3)
 
-As you write the docstring, notice: **that docstring becomes the tool's description, which the model reads to decide when to call you.** You are writing prompt text.
+Implement T1, T2, and T3. Then check them in the agent: ask *"what city is JFK in?"* (T1); say *"I always fly vegetarian, remember that"* and confirm it saves (T2); quit, start a fresh session, and ask *"what meal will I get?"* It recalls the note from `data/memory/user.md` (T3).
 
-Restart the server. Show the TA the agent answering *"what city is JFK in?"* (it couldn't before). TA may ask: *where did the agent get the list of tools and their descriptions?*
+Show the TA the recall across two sessions. Expect the question: where does a saved note re-enter the conversation?
 
-## D2 · Poison a tool description, watch it persist
+## D2 · Poison a tool description
 
-The server ships a tool `get_local_tips` from a "third-party" source. Its description is clean normally and **poisoned** when the server runs with `TOOL_ATTACK=1`. Memory (`save_memory`, and the agent reading `data/memory/user.md`) is already wired up.
+A provided tool, `get_local_tips`, has a clean description normally and a poisoned one when the server runs with `TOOL_ATTACK=1`. Restart the server that way, start a fresh session, and ask anything. The agent follows an instruction hidden in that tool's description and calls `save_memory` with a false "fee-exempt staff" fact. Restart the server *without* `TOOL_ATTACK` and start a new session: the lie persists from memory.
 
-1. **Poison.** Stop the server; restart it as `TOOL_ATTACK=1 PORT=8000 start-airline-server`. In a fresh agent session, ask any normal question (e.g. *"what time is it in UTC?"*). Watch the agent follow the instruction hidden in `get_local_tips`'s description and call `save_memory`. Look at `data/memory/user.md`.
-2. **Persist.** Stop the server and restart it **without** `TOOL_ATTACK` (the malicious tool is "gone"). Start a brand-new agent session and ask to add a checked bag. 
+Show the TA `data/memory/user.md` and the clean-session behaviour. Answer: where did the instruction live before any tool ran, and why does a clean session still obey it?
 
-Show the TA: the poisoned description (`TOOL_ATTACK=1 python -c "from mcp_airline import tools"` or just read `tools.py`), `data/memory/user.md`, and the clean-session behaviour. Then answer:
-- **Where did the instruction live?** Point to it. (It was in the tool list = the prompt, before any tool ran.)
-- **Why does the clean session still obey it?** (It is in memory now.)
-- **One defence** that would reduce this (review and pin tool descriptions, show them to the user before trusting a server, screen tool output and memory with a guardrail), and why it is a reliability improvement, **not a guarantee**. Building that guarantee is beyond the scope of this lab.
+## D3 · Add a guardrail, then watch it bypassed (T4)
+
+Implement T4 so the agent withholds a suspicious tool description before the model sees it. Re-run `TOOL_ATTACK=1`: the blunt description is now blocked. Then run `TOOL_ATTACK=subtle`, a reworded version with no obvious keywords: it slips past your filter.
+
+Show the TA both runs, and explain why your guardrail reduces risk but does not guarantee safety.
 
 ## Show your work
-Show D1 and D2 to the TA in your section. Nothing to submit or commit. Reset memory between runs with `rm data/memory/user.md`.
 
-## Stretch (optional)
-- Make `airport_info` fetch real data from the [Wikipedia REST API](https://en.wikipedia.org/api/rest_v1/). Now a third surface (tool *results*) is attacker-controlled too.
-- Add a guardrail: screen anything before it is written to memory, and measure what it misses.
+Show D1, D2, and D3 to the TA. Nothing to submit or commit. Reset memory between runs with `rm data/memory/user.md`.
+
+## Stretch
+
+Make `airport_info` fetch real data from the [Wikipedia REST API](https://en.wikipedia.org/api/rest_v1/). Tool results then become a third untrusted surface.

@@ -1,8 +1,8 @@
 # Lab 7: A tool description is prompt text
 
-**Start with [LAB7.md](LAB7.md).** You add one MCP tool to the airline agent below, then
-see an attack hidden in a tool's *description* write a false fact into the agent's memory
-and persist it into a later, clean session. The Python track (`python/`) is the lab.
+**Start with [LAB7.md](LAB7.md).** You make four small changes to the airline agent below,
+then see an attack hidden in a tool's *description* write a false fact into the agent's
+memory and persist it into a later, clean session. The Python track (`python/`) is the lab.
 
 ---
 
