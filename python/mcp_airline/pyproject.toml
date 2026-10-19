@@ -13,8 +13,8 @@ authors = [
     {name = "Airline MCP Team"}
 ]
 dependencies = [
-    "mcp>=2.3.0",
-    "fastmcp>=0.2.0",
+    "mcp==2.3.0",
+    "fastmcp==4.1.1",
     "pydantic>=2.0.0",
 ]
 
