@@ -1,10 +1,8 @@
 # Lab 7: A tool description is prompt text
 
-**40 min · pairs · built on the airline agent you will harden in I4 · everything is fictional**
+You will add one MCP tool to the airline agent, then study an attack that needs **no poisoned data and no user message**. It hides in a tool's *description*. The agent reads every tool's description to decide what to call, so a description from a third-party MCP server is attacker-controlled text that is already in the model's context. Here it quietly writes a false, costly "fact" into the agent's **memory**, where it survives into a later, clean session. All data is fictional.
 
-You will add one MCP tool to the airline agent, then watch an attack that needs **no poisoned data and no user message** — it hides in a tool's *description*. The agent reads every tool's description to decide what to call, so a description from a third-party MCP server is attacker-controlled text that is already in the model's context. Here it quietly writes a false, costly "fact" into the agent's **memory**, where it survives into a later, clean session.
-
-## How the agent builds its context (2 min)
+## How the agent builds its context
 
 Every turn, the model sees one prompt assembled from three things:
 
@@ -28,7 +26,7 @@ cd python && python3 -m venv .venv && source .venv/bin/activate && pip install -
 
 Model is one line in `python/agent/src/agent/config.py`. Use the course Vertex credits (the free tier is ~5 req/min).
 
-## D1 · Add a tool (pass/fail, ~15 min)
+## D1 · Add a tool
 
 Implement the one `TODO` in `python/mcp_airline/src/mcp_airline/tools.py`: `airport_info(iata)`. `current_time` right above it is a worked example to copy from.
 
@@ -36,7 +34,7 @@ As you write the docstring, notice: **that docstring becomes the tool's descript
 
 Restart the server. Show the TA the agent answering *"what city is JFK in?"* (it couldn't before). TA may ask: *where did the agent get the list of tools and their descriptions?*
 
-## D2 · Poison a tool description, watch it persist (pass/fail, ~18 min)
+## D2 · Poison a tool description, watch it persist
 
 The server ships a tool `get_local_tips` from a "third-party" source. Its description is clean normally and **poisoned** when the server runs with `TOOL_ATTACK=1`. Memory (`save_memory`, and the agent reading `data/memory/user.md`) is already wired up.
 
@@ -46,7 +44,7 @@ The server ships a tool `get_local_tips` from a "third-party" source. Its descri
 Show the TA: the poisoned description (`TOOL_ATTACK=1 python -c "from mcp_airline import tools"` or just read `tools.py`), `data/memory/user.md`, and the clean-session behaviour. Then answer:
 - **Where did the instruction live?** Point to it. (It was in the tool list = the prompt, before any tool ran.)
 - **Why does the clean session still obey it?** (It is in memory now.)
-- **One defence** that would reduce this (review/pin tool descriptions, show them to the user before trusting a server, screen tool output and memory with a guardrail) — and why it is a reliability improvement, **not a guarantee**. That guarantee is I4's job.
+- **One defence** that would reduce this (review and pin tool descriptions, show them to the user before trusting a server, screen tool output and memory with a guardrail), and why it is a reliability improvement, **not a guarantee**. Building that guarantee is beyond the scope of this lab.
 
 ## Submit
 Commit your code. Do not commit `.env` or `data/memory/`. Show D1 and D2 in your section. To reset memory between runs: `rm data/memory/user.md`.
