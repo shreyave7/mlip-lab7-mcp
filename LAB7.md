@@ -2,6 +2,18 @@
 
 You will add one MCP tool to the airline agent, then study an attack that needs **no poisoned data and no user message**. It hides in a tool's *description*. The agent reads every tool's description to decide what to call, so a description from a third-party MCP server is attacker-controlled text that is already in the model's context. Here it quietly writes a false, costly "fact" into the agent's **memory**, where it survives into a later, clean session. All data is fictional.
 
+## What you edit
+
+You change **one file**: `python/mcp_airline/src/mcp_airline/tools.py` (a single `TODO`, the `airport_info` tool). Everything else is provided. Ignore the rest of the repository, including the entire `typescript/` folder.
+
+Three files are worth reading:
+
+| File | What it is |
+| --- | --- |
+| `python/mcp_airline/src/mcp_airline/tools.py` | The MCP server's tools. Your `TODO` is here. |
+| `python/agent/src/agent/agent.py` | The agent loop, and how the system prompt and memory are assembled. |
+| `data/memory/user.md` | The agent's memory file, created at runtime. |
+
 ## How the agent builds its context
 
 Every turn, the model sees one prompt assembled from three things:
@@ -16,7 +28,7 @@ So two surfaces carry untrusted text into the model: **memory** and **tool descr
 
 ## Setup (before class)
 
-Two terminals. See `python/README.md`. Put your Gemini (Vertex) key in `python/agent/.env`.
+Two terminals. See `python/README.md`.
 
 ```bash
 cd python && python3 -m venv .venv && source .venv/bin/activate && pip install -e ./agent -e ./mcp_airline
@@ -24,7 +36,7 @@ cd python && python3 -m venv .venv && source .venv/bin/activate && pip install -
 - Terminal A (server): `PORT=8000 start-airline-server`
 - Terminal B (agent): `agent-cli http://localhost:8000/mcp`
 
-Model is one line in `python/agent/src/agent/config.py`. Use the course Vertex credits (the free tier is ~5 req/min).
+**Any LLM works.** The agent uses LiteLLM, so pick whatever you have: OpenAI, Anthropic, a local model, etc. Change the one `MODEL` line in `python/agent/src/agent/config.py` and set the matching API key in `python/agent/.env`. The default is a free Google AI Studio Gemini model, chosen only because it needs no payment (its free tier is about 5 requests per minute); it carries no other significance.
 
 ## D1 · Add a tool
 
@@ -46,8 +58,8 @@ Show the TA: the poisoned description (`TOOL_ATTACK=1 python -c "from mcp_airlin
 - **Why does the clean session still obey it?** (It is in memory now.)
 - **One defence** that would reduce this (review and pin tool descriptions, show them to the user before trusting a server, screen tool output and memory with a guardrail), and why it is a reliability improvement, **not a guarantee**. Building that guarantee is beyond the scope of this lab.
 
-## Submit
-Commit your code. Do not commit `.env` or `data/memory/`. Show D1 and D2 in your section. To reset memory between runs: `rm data/memory/user.md`.
+## Show your work
+Show D1 and D2 to the TA in your section. Nothing to submit or commit. Reset memory between runs with `rm data/memory/user.md`.
 
 ## Stretch (optional)
 - Make `airport_info` fetch real data from the [Wikipedia REST API](https://en.wikipedia.org/api/rest_v1/). Now a third surface (tool *results*) is attacker-controlled too.
