@@ -15,7 +15,8 @@ from typing import List, Dict, Any, Optional
 
 from .agent import ToolCallingAgent
 from .tool_manager import ToolManager
-from .config import TAU2_DOMAIN_DATA_PATH, benchmark_user_simulation_llm
+from .config import TAU2_DOMAIN_DATA_PATH, BENCHMARK_MEMORY_FILE, benchmark_user_simulation_llm
+from .memory import Memory
 from .benchmark_evaluator import Task, Evaluator, EvaluationResult
 
 
@@ -228,8 +229,8 @@ def run_single_task(
     if not tool_manager.reset_all():
         raise RuntimeError("Failed to reset MCP servers")
 
-    # Create agent
-    agent = ToolCallingAgent(tool_manager)
+    # Create agent (memory accumulates across the tasks of a benchmark run)
+    agent = ToolCallingAgent(tool_manager, memory_file=BENCHMARK_MEMORY_FILE)
 
     # Create user simulator
     user_scenario = format_user_scenario(task)
@@ -305,6 +306,9 @@ def run_benchmark(
         tasks = [t for t in tasks if task_filter in t.id]
     
     print(f"🎯 Running {len(tasks)} tasks\n")
+
+    # Start each benchmark run with an empty memory
+    Memory(BENCHMARK_MEMORY_FILE).clear()
 
     # Initialize shared components
     orchestrator = Orchestrator()

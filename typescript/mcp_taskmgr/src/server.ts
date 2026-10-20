@@ -1,13 +1,13 @@
 #!/usr/bin/env -S deno run --allow-all
 
-import { Server } from "npm:@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "npm:@modelcontextprotocol/sdk/server/stdio.js";
-import { StreamableHTTPServerTransport } from "npm:@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from "npm:@modelcontextprotocol/sdk/types.js";
-import express, { Request, Response } from "npm:express";
+} from "@modelcontextprotocol/sdk/types.js";
+import express, { Request, Response } from "express";
 import { MockDatabase } from "./types.ts";
 import { TOOLS, getToolList, executeToolCall } from "./tools.ts";
 

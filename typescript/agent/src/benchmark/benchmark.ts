@@ -9,7 +9,8 @@ import { generateText, ModelMessage } from "ai";
 import { ToolCallingAgent } from "../agent.ts";
 import { ToolManager } from "../tool_manager.ts";
 import dotenv from "dotenv";
-import { tau2DomainDataPath, userSimulationModel } from "../config.ts";
+import { benchmarkMemoryFile, tau2DomainDataPath, userSimulationModel } from "../config.ts";
+import { Memory } from "../memory.ts";
 import assert from "node:assert";
 import { Evaluator, Task, EvaluationResult } from "./evaluator.ts";
 
@@ -54,6 +55,7 @@ ${this.userScenario}
     const response = await generateText({
       model: this.model,
       messages: this.userConversationHistory,
+      allowSystemInMessages: true,
     });
 
     const userResponse = response.text;
@@ -193,8 +195,8 @@ async function runSingleTask(
   // Reset MCP servers before each task
   assert(await toolManager.resetAll(), "Failed to reset MCP servers");
 
-  // Create agent
-  const agent = new ToolCallingAgent(toolManager);
+  // Create agent (memory accumulates across the tasks of a benchmark run)
+  const agent = new ToolCallingAgent(toolManager, undefined, undefined, benchmarkMemoryFile);
 
   // Create user simulator
   const userScenario = formatUserScenario(task);
@@ -258,6 +260,9 @@ async function runBenchmark(config: BenchmarkConfig) {
     : tasks;
 
   console.log(`🎯 Running ${tasksToRun.length} tasks\n`);
+
+  // Start each benchmark run with an empty memory
+  new Memory(benchmarkMemoryFile).clear();
 
   // Initialize shared components
   const orchestrator = new Orchestrator();

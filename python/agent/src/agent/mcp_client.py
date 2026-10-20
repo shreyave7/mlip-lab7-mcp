@@ -16,10 +16,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Any, Optional
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-try:  # mcp renamed this client in 2.x; support both
-    from mcp.client.streamable_http import streamable_http_client as streamablehttp_client
-except ImportError:  # older mcp
-    from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 
 
 @dataclass
@@ -119,9 +116,7 @@ class MCPServerConnection:
     async def _list_tools(self) -> List[MCPTool]:
         """Request list of available tools from the server"""
         if self.transport_type == 'http':
-            # mcp 2.x yields (read, write); older mcp yields a 3rd value. Slice to support both.
-            async with streamablehttp_client(self.server_url) as streams:
-                read, write = streams[0], streams[1]
+            async with streamable_http_client(self.server_url) as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     response = await session.list_tools()
@@ -129,7 +124,7 @@ class MCPServerConnection:
                         MCPTool(
                             name=tool.name,
                             description=tool.description,
-                            inputSchema=getattr(tool, "input_schema", None) or getattr(tool, "inputSchema", {})
+                            inputSchema=tool.input_schema
                         )
                         for tool in response.tools
                     ]
@@ -142,7 +137,7 @@ class MCPServerConnection:
                         MCPTool(
                             name=tool.name,
                             description=tool.description,
-                            inputSchema=getattr(tool, "input_schema", None) or getattr(tool, "inputSchema", {})
+                            inputSchema=tool.input_schema
                         )
                         for tool in response.tools
                     ]
@@ -150,8 +145,7 @@ class MCPServerConnection:
     async def _call_tool(self, name: str, args: Dict[str, Any]) -> str:
         """Internal async helper for calling tools"""
         if self.transport_type == 'http':
-            async with streamablehttp_client(self.server_url) as streams:
-                read, write = streams[0], streams[1]
+            async with streamable_http_client(self.server_url) as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     response = await session.call_tool(name, arguments=args)

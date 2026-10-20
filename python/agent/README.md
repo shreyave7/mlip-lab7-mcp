@@ -121,11 +121,10 @@ Edit `src/agent/config.py`:
 ```python
 # In agent_llm function, change the model parameter:
 return completion(
-    model="gemini/gemini-2.0-flash",  # Change this
+    model="gemini/gemini-3.8-flash",  # Change this
     messages=messages,
     tools=tools if has_tools else None,
     tool_choice="auto" if has_tools else None,
-    temperature=0.0,
 )
 ```
 

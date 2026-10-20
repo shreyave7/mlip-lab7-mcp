@@ -13,9 +13,10 @@ authors = [
     {name = "Airline MCP Team"}
 ]
 dependencies = [
-    "mcp==2.3.0",
-    "fastmcp==4.1.1",
-    "pydantic>=2.0.0",
+    "mcp>=2.0.0,<3",
+    "fastmcp>=4.0.0,<5",
+    "pydantic>=2.11.0",
+    "starlette>=1.0.0",
 ]
 
 [project.scripts]
@@ -23,11 +24,11 @@ start-airline-server = "mcp_airline.app:main"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=23.0",
-    "ruff>=0.1.0",
-    "mypy>=1.0",
+    "pytest>=9.0",
+    "pytest-asyncio>=1.0",
+    "black>=26.0",
+    "ruff>=0.16",
+    "mypy>=2.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -40,6 +41,8 @@ target-version = ["py310"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "F",   # pyflakes

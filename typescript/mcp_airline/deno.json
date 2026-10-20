@@ -7,12 +7,11 @@
     "test": "deno test --allow-all"
   },
   "imports": {
-    "@std/": "https://deno.land/std@0.230.0/",
-    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@1.20.0",
-    "@types/node": "npm:@types/node@^24.7.2",
-    "express": "npm:express@5.1.0",
-    "@types/express": "npm:@types/express@5.0.3",
-    "zod": "npm:zod@^4.1.12"
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@~1.28.0",
+    "@types/node": "npm:@types/node@^26.6.4",
+    "express": "npm:express@^5.2.1",
+    "@types/express": "npm:@types/express@^5.0.6",
+    "zod": "npm:zod@^4.6.5"
   },
   "compilerOptions": {
     "strict": true

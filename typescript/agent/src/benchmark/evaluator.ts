@@ -154,10 +154,16 @@ export class Evaluator {
       return { passed: true, details: [] };
     }
 
-    // Format conversation for LLM
+    // Format conversation for LLM (only user and assistant text)
+    const textOf = (m: ModelMessage): string =>
+      typeof m.content === "string"
+        ? m.content
+        : m.content.map((part: any) => part.type === "text" ? part.text : "").join("");
     const trajectoryStr = conversation
-      .filter((m) => (m.role === "assistant" || m.role === "user") && typeof m.content === "string")
-      .map((m) => `${m.role}: ${m.content}`)
+      .filter((m) => m.role === "assistant" || m.role === "user")
+      .map((m) => ({ role: m.role, text: textOf(m) }))
+      .filter((m) => m.text)
+      .map((m) => `${m.role}: ${m.text}`)
       .join("\n");
 
     const systemPrompt = `TASK
@@ -196,6 +202,7 @@ ${JSON.stringify(nlAssertions)}`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        allowSystemInMessages: true,
       });
 
       const resultData = parser.parse(response.text);

@@ -15,9 +15,11 @@ export function logMessageToContext(message: ModelMessage): void {
       // Messages with content array (tool-call or tool-result)
       for (const item of message.content) {
         if ("type" in item) {
-          if (item.type === "tool-call") {
+          if (item.type === "text") {
+            console.log(`   ${item.text}`);
+          } else if (item.type === "tool-call") {
             console.log(`   Tool Call: ${item.toolName}`);
-            console.log(`   Args: ${JSON.stringify((item as any).args)}`);
+            console.log(`   Args: ${JSON.stringify(item.input)}`);
           } else if (item.type === "tool-result") {
             console.log(`   Tool Result: ${item.toolName}`);
             if (

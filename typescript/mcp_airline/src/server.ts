@@ -1,14 +1,14 @@
 #!/usr/bin/env -S deno run --allow-all
 
-import { Server } from "npm:@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "npm:@modelcontextprotocol/sdk/server/stdio.js";
-import { StreamableHTTPServerTransport } from "npm:@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from "npm:@modelcontextprotocol/sdk/types.js";
-import express from "npm:express";
-import type { Request, Response } from "npm:express";
+} from "@modelcontextprotocol/sdk/types.js";
+import express from "express";
+import type { Request, Response } from "express";
 import { AirlineDatabase } from "./types.ts";
 import { TOOLS, getToolList, executeToolCall } from "./tools.ts";
 
@@ -118,7 +118,7 @@ app.post('/api/login', async (req: Request, res: Response) => {
     }
 });
 
-app.get('/api/profile/:userId', async (req: Request, res: Response) => {
+app.get('/api/profile/:userId', async (req: Request<{ userId: string }>, res: Response) => {
     try {
         const user_id = req.params.userId;
         if (!user_id) {
@@ -134,7 +134,7 @@ app.get('/api/profile/:userId', async (req: Request, res: Response) => {
     }
 });
 
-app.put('/api/profile/:userId', async (req: Request, res: Response) => {
+app.put('/api/profile/:userId', async (req: Request<{ userId: string }>, res: Response) => {
     try {
         const user_id = req.params.userId;
         if (!user_id) {

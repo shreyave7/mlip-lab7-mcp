@@ -10,13 +10,11 @@
     "strict": true
   },
   "imports": {
-    "@ai-sdk/google": "npm:@ai-sdk/google@^2.0.22",
-    "ai": "npm:ai@^5.0.68",
+    "@ai-sdk/google": "npm:@ai-sdk/google@~2.0.101",
+    "ai": "npm:ai@~5.0.272",
     "ai-json-fixer": "npm:ai-json-fixer@^0.2.0",
-    "json5": "npm:json5@^2.2.3",
-    "zod": "npm:zod@^4.1.12",
-    "dotenv": "npm:dotenv@^16.3.1",
-    "@ai-sdk/provider": "npm:@ai-sdk/provider@2.0.0",
-    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@1.20.0"
+    "zod": "npm:zod@^4.6.5",
+    "dotenv": "npm:dotenv@^16.6.1",
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@~1.28.0"
   }
 }

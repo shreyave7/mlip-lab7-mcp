@@ -16,7 +16,7 @@ def is_suspicious(description: str) -> bool:
     """Host-side guardrail: a tool description is untrusted, so screen it before
     the model sees it. Starter returns False (screens nothing).
 
-    TASK 4: return True if `description` reads like an instruction to the assistant
+    TASK 2: return True if `description` reads like an instruction to the assistant
     (addresses the "assistant", says to "always" do something, or to "call" another
     tool), not a plain description. Do NOT just match ##MAGIC##: a real attacker
     leaves no obvious marker, and you should see a reworded description slip past.
@@ -45,7 +45,7 @@ def convert_mcp_tools_to_openai(mcp_tools: List[MCPTool]) -> List[Dict[str, Any]
         properties = input_schema.get('properties', {})
         required = input_schema.get('required', [])
 
-        # Lab 7: screen the description with the guardrail before the model sees it.
+        # Lab 7 Task 2: screen the description with the guardrail before the model sees it.
         description = tool.description or f"Tool: {tool.name}"
         if is_suspicious(description):
             print(f"   Guardrail withheld a suspicious description on tool '{tool.name}'")

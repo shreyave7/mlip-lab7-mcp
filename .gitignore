@@ -3,11 +3,9 @@
 node_modules
 assignment/agent/messages.log
 
-# Lab 7
+# Long-term memory of the agent (runtime data)
+memory.md
+benchmark_memory.md
+
+# Lab 7 TA-only answer key
 TA_GUIDE.md
-**/.env
-data/memory/
-.venv/
-__pycache__/
-*.egg-info/
-messages.log

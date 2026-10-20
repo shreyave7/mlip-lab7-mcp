@@ -15,10 +15,8 @@ from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 
 from .tool_manager import ToolManager
-from .config import TAU2_DOMAIN_DATA_PATH, agent_llm
-
-# Shared with the airline server's save_memory tool (see mcp_airline/tools.py).
-MEMORY_FILE = Path(__file__).resolve().parents[4] / "data" / "memory" / "user.md"
+from .memory import Memory, REMEMBER_TOOL
+from .config import TAU2_DOMAIN_DATA_PATH, MEMORY_FILE, agent_llm
 
 
 @dataclass
@@ -38,6 +36,19 @@ class ModelMessage:
     tool_call_id: Optional[str] = None
 
 
+def memory_note_allowed(note: str) -> bool:
+    """Guardrail on what gets written to long-term memory. Starter returns True
+    (screens nothing).
+
+    TASK 3: return False for a note that should not be persisted, for example one
+    that claims a fee waiver, an exemption, or staff status the user cannot grant
+    themselves. This screens the OUTPUT side (what persists) rather than the tool
+    descriptions Task 2 screens. A reworded note will still slip past; that is the
+    point.
+    """
+    return True
+
+
 class ToolCallingAgent:
     """
     A tool-calling agent that helps users by calling tools via MCP servers.
@@ -53,7 +64,8 @@ class ToolCallingAgent:
     def __init__(
         self,
         tool_manager: ToolManager,
-        max_steps: int = 5
+        max_steps: int = 5,
+        memory_file: str = MEMORY_FILE
     ):
         """
         Initialize the agent.
@@ -61,9 +73,11 @@ class ToolCallingAgent:
         Args:
             tool_manager: Manager for MCP tools
             max_steps: Maximum reasoning steps before giving up
+            memory_file: Markdown file holding the long-term memory
         """
         self.tool_manager = tool_manager
         self.max_steps = max_steps
+        self.memory = Memory(memory_file)
         self.messages: List[Dict[str, Any]] = []
         self.logger = logging.getLogger("agent.messages")
         for handler in list(self.logger.handlers):
@@ -99,34 +113,25 @@ class ToolCallingAgent:
 
         # Agent loop
         for step in range(1, self.max_steps + 1):
-            response = self._reason()
+            message = self._reason()
+            text = message.get("content")
+            tool_calls = message.get("tool_calls") or []
 
-            # Check if LLM provided text response
-            if response.get("text"):
-                self._add_to_context({
-                    "role": "assistant",
-                    "content": response["text"]
-                })
+            # Empty response (neither text nor tool calls): try again
+            if not text and not tool_calls:
+                continue
 
-            # Check if LLM wants to use tools
-            use_tools = response.get("tool_calls") and len(response["tool_calls"]) > 0
+            # Add the assistant message (text and/or tool calls) as one turn
+            self._add_to_context(message)
 
-            if use_tools:
-                # Add assistant message with tool calls
-                self._add_to_context({
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": response["tool_calls"]
-                })
-
-                # Execute tool calls and add results
-                for tool_call in response["tool_calls"]:
-                    result = self._act(tool_call)
-                    self._add_to_context(result)
+            # Execute tool calls and add results
+            for tool_call in tool_calls:
+                result = self._act(tool_call)
+                self._add_to_context(result)
 
             # Exit condition: text response without tool calls
-            if response.get("text") and not use_tools:
-                return response["text"]
+            if not tool_calls:
+                return text
 
         # Max steps reached
         raise RuntimeError(
@@ -138,9 +143,12 @@ class ToolCallingAgent:
         Call the LLM to reason about the next step.
 
         Returns:
-            Dictionary with 'text' and/or 'tool_calls'
+            The assistant message as a dictionary, with 'content' and/or 'tool_calls'.
+            The message is kept as returned by the model, including provider-specific
+            fields (e.g., Gemini thought signatures or thinking blocks) that must be
+            sent back to the model in later calls.
         """
-        tools = self.tool_manager.get_tools()
+        tools = self.tool_manager.get_tools() + [REMEMBER_TOOL]
 
         try:
             response = agent_llm(
@@ -148,27 +156,7 @@ class ToolCallingAgent:
                 tools
             )
 
-            message = response.choices[0].message
-
-            # Extract text and tool calls
-            result = {
-                "text": message.content if hasattr(message, 'content') else None,
-                "tool_calls": []
-            }
-
-            # Parse tool calls if present
-            if hasattr(message, 'tool_calls') and message.tool_calls:
-                for tc in message.tool_calls:
-                    result["tool_calls"].append({
-                        "id": tc.id,
-                        "type": tc.type,
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments
-                        }
-                    })
-
-            return result
+            return response.choices[0].message.model_dump(exclude_none=True)
 
         except Exception as e:
             self.logger.error(json.dumps({"error": str(e)}))
@@ -191,8 +179,14 @@ class ToolCallingAgent:
             # Parse arguments (they come as a JSON string)
             tool_args = json.loads(tool_args_str) if isinstance(tool_args_str, str) else tool_args_str
 
-            # Execute the tool
-            result = self.tool_manager.execute_tool(tool_name, tool_args)
+            # Execute the tool (memory is handled by the agent, all others by MCP servers)
+            if tool_name == "remember":
+                if memory_note_allowed(tool_args["note"]):
+                    result = self.memory.remember(tool_args["note"])
+                else:
+                    result = "Refused: the note was blocked by the memory guardrail (Lab 7 Task 3)."
+            else:
+                result = self.tool_manager.execute_tool(tool_name, tool_args)
 
             return {
                 "role": "tool",
@@ -236,15 +230,6 @@ class ToolCallingAgent:
         """Get the full conversation history"""
         return self.messages
 
-    def _load_memory(self) -> str:
-        """Read durable facts saved about the user in earlier sessions."""
-        # TASK 3 (context assembly): return the text of MEMORY_FILE if it exists,
-        # otherwise "(no saved notes yet)". This string is dropped straight into
-        # the system prompt every session (see _create_system_prompt), so anything
-        # in the memory file becomes instructions the model sees from then on.
-        # That is the whole point of the attack later: state re-enters the prompt.
-        raise NotImplementedError("Lab 7 Task 3: implement _load_memory")
-
     def _create_system_prompt(self) -> str:
         """
         Create the system prompt with instructions and policy.
@@ -273,4 +258,4 @@ class ToolCallingAgent:
                 "Please ensure the template file is available before running the agent."
             ) from exc
 
-        return template.replace("$POLICY", policy).replace("$MEMORY", self._load_memory())
+        return template.replace("$POLICY", policy).replace("$MEMORY", self.memory.load())

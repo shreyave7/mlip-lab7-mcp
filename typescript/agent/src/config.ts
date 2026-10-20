@@ -1,4 +1,4 @@
-import { google } from "npm:@ai-sdk/google";
+import { google } from "@ai-sdk/google";
 import { rateLimitedModel, RateLimiter } from "./rate_limiter.ts";
 
 /////////////////////////////////
@@ -11,10 +11,13 @@ import { rateLimitedModel, RateLimiter } from "./rate_limiter.ts";
 
 const rateLimiter = new RateLimiter();
 
-const defaultModel = rateLimitedModel(google("gemini-2.5-flash-lite"), rateLimiter)
+const defaultModel = rateLimitedModel(google("gemini-3.8-flash"), rateLimiter)
 
 //for the agent
 export const agentModel = defaultModel
+
+//for integrating notes into the long-term memory
+export const memoryModel = defaultModel
 
 //for benchmarks
 export const userSimulationModel = defaultModel
@@ -29,3 +32,18 @@ export const tau2Domain = "airline" // "airline" | "mock"
 
 
 export const tau2DomainDataPath = "../../data/" + tau2Domain + "/"
+
+
+/////////////////////////////////
+// Long-term memory
+/////////////////////////////////
+
+// Markdown file with the agent's long-term memory (relative to the working directory).
+// Shared across all conversations and users.
+export const memoryFile = "memory.md"
+
+// Separate memory for benchmark runs, cleared at the start of each run
+export const benchmarkMemoryFile = "benchmark_memory.md"
+
+// Length limit for the memory, enforced by the LLM when integrating new notes
+export const memoryMaxWords = 300
